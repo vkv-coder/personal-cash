@@ -241,6 +241,32 @@ textarea.inp{resize:none;height:72px;}
   <div id="remindersList"></div>
   <div class="info">Weekends are skipped in the 2-day countdown</div>
 </div>
+
+<div class="screen" id="s-emi">
+  <div class="hdr-sm">
+    <button class="back-btn" onclick="goBack()">&#8592;</button>
+    <div class="title">EMI / Loans</div>
+    <button class="hdr-btn" onclick="toggleAddEmi()">+ Add</button>
+  </div>
+  <div id="addEmiForm" style="display:none">
+    <div class="card">
+      <div class="card-title">Add EMI / Loan</div>
+      <div class="fg"><label class="lbl">Name *</label><input class="inp" id="emiName" placeholder="e.g. Home EMI, Car Loan"/></div>
+      <div class="row">
+        <div class="fg"><label class="lbl">Monthly Amount *</label><input class="inp" type="number" id="emiAmount"/></div>
+        <div class="fg"><label class="lbl">Due Day (1-31) *</label><input class="inp" type="number" id="emiDueDay" min="1" max="31"/></div>
+      </div>
+      <div class="fg"><label class="lbl">Pay From Account *</label><select class="inp" id="emiAccount"><option value="">-- Select --</option></select></div>
+      <div class="row" style="margin-top:4px">
+        <button class="btn-primary" style="flex:1" onclick="saveEmi()">Save</button>
+        <button class="btn-sec" onclick="toggleAddEmi()" style="margin-left:8px">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div id="emiList"></div>
+  <div class="info">Unpaid EMIs carry forward and accumulate liability each month</div>
+</div>
+
 <div class="screen" id="s-reports">
   <div class="hdr-sm">
     <button class="back-btn" onclick="goBack()">&#8592;</button>
@@ -339,6 +365,7 @@ function go(id,resetStack){
   if(id==='s-home')renderHome();
   else if(id==='s-accounts')renderAccounts();
   else if(id==='s-reminders')renderReminders();
+  else if(id==='s-emi')renderEmi();
   else if(id==='s-reports')initReports();
   else if(id==='s-settings')renderSettings();
   else if(id==='s-newTxn')renderTxnForm();
@@ -349,6 +376,7 @@ function goBack(){
   if(prev==='s-home')renderHome();
   else if(prev==='s-accounts')renderAccounts();
   else if(prev==='s-reminders')renderReminders();
+  else if(prev==='s-emi')renderEmi();
   else if(prev==='s-reports')renderReports();
   else if(prev==='s-settings')renderSettings();
 }
@@ -362,7 +390,7 @@ function doLogin(){
     showToast('Different email. Log out first.','error');
   }else{
     if(!name){showToast('Enter your display name','error');return;}
-    state.user={id:'u'+Date.now(),name:name,email:email,banks:[],cards:[],cashOnHand:0,transactions:[],reminders:[]};
+    state.user={id:'u'+Date.now(),name:name,email:email,banks:[],cards:[],cashOnHand:0,transactions:[],reminders:[],emis:[],emiPayments:{}};
     state.initialized=true;saveState();go('s-home',true);showToast('Welcome, '+name+'!');
   }
 }
@@ -371,7 +399,9 @@ function renderHome(){
   document.getElementById('homeUsername').textContent='👤 '+u.name;
   var banks=(u.banks||[]).reduce(function(s,b){return s+b.balance;},0);
   var cards=(u.cards||[]).reduce(function(s,c){return s+c.balance;},0);
-  var cash=u.cashOnHand||0,nw=banks+cards+cash;
+  var cash=u.cashOnHand||0;
+  var emiLiability=getPendingEmiLiability();
+  var nw=banks+cards+cash-emiLiability;
   document.getElementById('homeNW').innerHTML='<div class="nw-lbl">Net Worth</div><div class="nw-val" style="color:'+(nw<0?'#FFCDD2':'#fff')+'">'+(nw<0?'-':'')+fmt(nw)+'</div><div class="nw-row"><div class="nw-item"><div class="sl">Banks</div><div class="sv">'+fmt(banks)+'</div></div><div class="nw-item"><div class="sl">CC Debt</div><div class="sv" style="color:'+(cards<0?'#FFCDD2':'#fff')+'">'+(cards<0?'-':'')+fmt(cards)+'</div></div><div class="nw-item"><div class="sl">Cash</div><div class="sv">'+fmt(cash)+'</div></div></div>';
   var due=dueReminders(),banner=document.getElementById('dueBanner');
   if(due.length>0){
@@ -611,6 +641,156 @@ function removeSubCat(cat,name){state.subCategories[cat]=(state.subCategories[ca
 function renderSubCatList(){
   document.getElementById('subCatList').innerHTML=MAIN_CATS.map(function(cat){return '<div class="card"><div class="card-title">'+cat+'</div><div class="chips">'+(state.subCategories[cat]||[]).map(function(s){return '<div style="display:flex;align-items:center;gap:4px;background:'+(s==='Other'?'#E3F2FD':'#BBDEFB')+';border-radius:100px;padding:5px 12px;border:1px solid #BBDEFB"><span style="font-size:12px;font-weight:700;color:#1565C0">'+s+'</span>'+(s!=='Other'?'<button onclick="removeSubCat(\''+cat+'\',\''+s+'\')" style="background:none;border:none;color:#D32F2F;font-size:15px;cursor:pointer;padding:0 0 0 3px;line-height:1">x</button>':'')+'</div>';}).join('')+'</div></div>';}).join('');
 }
+
+function getPendingEmiLiability(){
+  var u=state.user;if(!u)return 0;
+  var today=new Date(),total=0;
+  (u.emis||[]).forEach(function(e){
+    if(!e.active)return;
+    var d=new Date(e.startYM+'-01');
+    while(d<=today){
+      var k=d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1);
+      if(!(u.emiPayments||{})[e.id+'-'+k])total+=e.amount;
+      d.setMonth(d.getMonth()+1);
+    }
+  });
+  return total;
+}
+function toggleAddEmi(){
+  var f=document.getElementById('addEmiForm');
+  var showing=f.style.display!=='none';
+  f.style.display=showing?'none':'block';
+  if(!showing){
+    document.getElementById('emiName').value='';
+    document.getElementById('emiAmount').value='';
+    document.getElementById('emiDueDay').value='';
+    var sel=document.getElementById('emiAccount');
+    sel.innerHTML='<option value="">-- Select --</option>';
+    getAccounts().forEach(function(a){
+      if(a.type==='bank'||a.type==='cash'){
+        var o=document.createElement('option');
+        o.value=a.id;o.textContent=a.label;sel.appendChild(o);
+      }
+    });
+  }
+}
+function saveEmi(){
+  var u=state.user;if(!u)return;
+  var name=document.getElementById('emiName').value.trim();
+  var amt=parseFloat(document.getElementById('emiAmount').value);
+  var day=parseInt(document.getElementById('emiDueDay').value);
+  var accId=document.getElementById('emiAccount').value;
+  if(!name||!amt||!day||!accId){showToast('Fill all fields','error');return;}
+  var today=new Date();
+  var startYM=today.getFullYear()+'-'+(today.getMonth()+1<10?'0':'')+(today.getMonth()+1);
+  if(!u.emis)u.emis=[];
+  if(!u.emiPayments)u.emiPayments={};
+  u.emis.unshift({id:'e'+Date.now(),name:name,amount:amt,dueDay:day,accountId:accId,active:true,startYM:startYM});
+  if(!u.reminders)u.reminders=[];
+  u.reminders.unshift({id:'r'+Date.now(),name:name,amount:amt,dueDay:day,accountId:accId,active:true});
+  saveState();showToast('EMI added!');toggleAddEmi();renderEmi();renderHome();
+}
+function renderEmiCard(e,ym,u){
+  var paid=(u.emiPayments||{})[e.id+'-'+ym];
+  var today=new Date(),unpaidMonths=0;
+  var d=new Date(e.startYM+'-01');
+  while(d<=today){
+    var k=d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1);
+    if(!(u.emiPayments||{})[e.id+'-'+k])unpaidMonths++;
+    d.setMonth(d.getMonth()+1);
+  }
+  var totalDue=unpaidMonths*e.amount;
+  var div=document.createElement('div');
+  div.className='card';div.style.marginTop='0';
+  div.style.borderLeft='3px solid '+(paid?'#2E7D32':'#D32F2F');
+  var info=document.createElement('div');
+  info.style.cssText='display:flex;justify-content:space-between;margin-bottom:8px';
+  var left=document.createElement('div');
+  left.innerHTML='<div style="font-size:14px;font-weight:800;color:#1A237E">'+e.name+'</div>'+
+    '<div style="font-size:11px;color:#90A4AE">Due every '+e.dueDay+(e.dueDay===1?'st':e.dueDay===2?'nd':e.dueDay===3?'rd':'th')+' of month</div>'+
+    '<div style="font-size:11px;font-weight:800;color:'+(paid?'#2E7D32':'#D32F2F')+';margin-top:3px">'+
+    (paid?'PAID this month':(unpaidMonths>1?unpaidMonths+' months unpaid':'UNPAID this month'))+'</div>';
+  var right=document.createElement('div');
+  right.style.textAlign='right';
+  right.innerHTML='<div style="font-size:15px;font-weight:900;color:#D32F2F">-'+fmt(e.amount)+'/mo</div>'+
+    (totalDue>e.amount?'<div style="font-size:11px;font-weight:800;color:#D32F2F">Total due: -'+fmt(totalDue)+'</div>':'');
+  info.appendChild(left);info.appendChild(right);div.appendChild(info);
+  var btns=document.createElement('div');btns.style.cssText='display:flex;gap:7px';
+  var mainBtn=document.createElement('button');
+  mainBtn.style.cssText='flex:1;background:'+(paid?'#FFF8E1':'#E8F5E9')+';border:1px solid '+(paid?'#FFE082':'#A5D6A7')+';border-radius:9px;padding:8px;color:'+(paid?'#E65100':'#2E7D32')+';font-size:12px;font-weight:800;cursor:pointer';
+  mainBtn.textContent=paid?'Undo Payment':'Mark Paid This Month';
+  (function(eid,eym,ispaid){mainBtn.onclick=function(){ispaid?unpayEmi(eid,eym):payEmi(eid,eym);};})(e.id,ym,paid);
+  var delBtn=document.createElement('button');
+  delBtn.style.cssText='background:#FFEBEE;border:1px solid #FFCDD2;border-radius:9px;padding:8px 11px;color:#D32F2F;font-size:11px;font-weight:700;cursor:pointer';
+  delBtn.textContent='X';
+  (function(eid){delBtn.onclick=function(){deleteEmi(eid);};})(e.id);
+  btns.appendChild(mainBtn);btns.appendChild(delBtn);div.appendChild(btns);
+  return div;
+}
+function renderEmi(){
+  var u=state.user;if(!u)return;
+  var today=new Date();
+  var ym=today.getFullYear()+'-'+(today.getMonth()+1<10?'0':'')+(today.getMonth()+1);
+  var emis=u.emis||[];
+  var container=document.getElementById('emiList');
+  container.innerHTML='';
+  if(emis.length===0){
+    container.innerHTML='<div class="empty"><div class="ico">💰</div><div class="etitle">No EMIs yet</div><div class="esub">Tap + Add to set up your EMIs and loans</div></div>';
+    return;
+  }
+  var active=emis.filter(function(e){return e.active;});
+  if(active.length>0){
+    var hdr=document.createElement('div');hdr.className='sec-hdr';hdr.textContent='This Month Status';
+    container.appendChild(hdr);
+    active.forEach(function(e){container.appendChild(renderEmiCard(e,ym,u));});
+  }
+  var inactive=emis.filter(function(e){return !e.active;});
+  if(inactive.length>0){
+    var hdr2=document.createElement('div');hdr2.className='sec-hdr';hdr2.textContent='Closed EMIs';
+    container.appendChild(hdr2);
+    inactive.forEach(function(e){
+      var div=document.createElement('div');div.className='card';div.style.cssText='margin-top:0;opacity:0.6';
+      div.innerHTML='<div style="display:flex;justify-content:space-between"><div style="font-size:14px;font-weight:800;color:#90A4AE">'+e.name+'</div><div style="font-size:14px;font-weight:900;color:#90A4AE">'+fmt(e.amount)+'/mo</div></div>';
+      var btn=document.createElement('button');
+      btn.style.cssText='margin-top:6px;background:#FFEBEE;border:1px solid #FFCDD2;border-radius:9px;padding:6px 14px;color:#D32F2F;font-size:11px;font-weight:700;cursor:pointer';
+      btn.textContent='Delete';
+      (function(eid){btn.onclick=function(){deleteEmi(eid);};})(e.id);
+      div.appendChild(btn);container.appendChild(div);
+    });
+  }
+}
+function payEmi(eid,ym){
+  var u=state.user;if(!u)return;
+  var e=(u.emis||[]).find(function(x){return x.id===eid;});if(!e)return;
+  if(!u.emiPayments)u.emiPayments={};
+  u.emiPayments[eid+'-'+ym]=true;
+  var acc=getAccounts().find(function(a){return a.id===e.accountId;});
+  if(acc){
+    if(acc.type==='bank'){u.banks=(u.banks||[]).map(function(b){return b.id===e.accountId?Object.assign({},b,{balance:b.balance-e.amount}):b;});}
+    else if(acc.type==='cash'){u.cashOnHand=(u.cashOnHand||0)-e.amount;}
+  }
+  u.transactions=[{id:Date.now(),date:todayStr(),fromAccountId:e.accountId,amount:-e.amount,isTransfer:false,mainCat:'Personal',subCat:e.name+' EMI',note:'EMI paid '+ym}].concat(u.transactions||[]);
+  saveState();showToast(e.name+' paid for '+ym+'!');renderEmi();renderHome();
+}
+function unpayEmi(eid,ym){
+  var u=state.user;if(!u)return;
+  var e=(u.emis||[]).find(function(x){return x.id===eid;});if(!e)return;
+  if(!u.emiPayments)u.emiPayments={};
+  delete u.emiPayments[eid+'-'+ym];
+  var acc=getAccounts().find(function(a){return a.id===e.accountId;});
+  if(acc){
+    if(acc.type==='bank'){u.banks=(u.banks||[]).map(function(b){return b.id===e.accountId?Object.assign({},b,{balance:b.balance+e.amount}):b;});}
+    else if(acc.type==='cash'){u.cashOnHand=(u.cashOnHand||0)+e.amount;}
+  }
+  saveState();showToast('Payment undone');renderEmi();renderHome();
+}
+function deleteEmi(eid){
+  var u=state.user;if(!u)return;
+  u.emis=(u.emis||[]).filter(function(e){return e.id!==eid;});
+  if(u.emiPayments){Object.keys(u.emiPayments).forEach(function(k){if(k.indexOf(eid+'-')===0)delete u.emiPayments[k];});}
+  saveState();showToast('EMI deleted');renderEmi();renderHome();
+}
+
 window.onload=function(){
   loadState();
   setTimeout(function(){
