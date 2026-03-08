@@ -242,6 +242,18 @@ textarea.inp{resize:none;height:72px;}
   <div class="info">Weekends are skipped in the 2-day countdown</div>
 </div>
 
+
+<div class="modal" id="payEmiModal">
+  <div class="modal-box">
+    <div style="font-size:15px;font-weight:800;color:#1B5E20;margin-bottom:14px" id="payEmiTitle">Pay EMI</div>
+    <div class="fg"><label class="lbl">Pay From Account *</label><select class="inp" id="payEmiAccount"><option value="">-- Select --</option></select></div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn-primary" style="flex:1" onclick="confirmPayEmi()">Confirm Payment</button>
+      <button class="btn-sec" onclick="closeModal('payEmiModal')" style="margin-left:8px">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="screen" id="s-emi">
   <div class="hdr-sm">
     <button class="back-btn" onclick="goBack()">&#8592;</button>
@@ -256,7 +268,6 @@ textarea.inp{resize:none;height:72px;}
         <div class="fg"><label class="lbl">Monthly Amount *</label><input class="inp" type="number" id="emiAmount"/></div>
         <div class="fg"><label class="lbl">Due Day (1-31) *</label><input class="inp" type="number" id="emiDueDay" min="1" max="31"/></div>
       </div>
-      <div class="fg"><label class="lbl">Pay From Account *</label><select class="inp" id="emiAccount"><option value="">-- Select --</option></select></div>
       <div class="row" style="margin-top:4px">
         <button class="btn-primary" style="flex:1" onclick="saveEmi()">Save</button>
         <button class="btn-sec" onclick="toggleAddEmi()" style="margin-left:8px">Cancel</button>
@@ -645,10 +656,13 @@ function renderSubCatList(){
 function getPendingEmiLiability(){
   var u=state.user;if(!u)return 0;
   var today=new Date(),total=0;
+  var curYM=today.getFullYear()+'-'+(today.getMonth()+1<10?'0':'')+(today.getMonth()+1);
   (u.emis||[]).forEach(function(e){
     if(!e.active)return;
+    // Liability starts from 1st of startYM regardless of due date
     var d=new Date(e.startYM+'-01');
-    while(d<=today){
+    var curMonth=new Date(curYM+'-01');
+    while(d<=curMonth){
       var k=d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1);
       if(!(u.emiPayments||{})[e.id+'-'+k])total+=e.amount;
       d.setMonth(d.getMonth()+1);
@@ -664,14 +678,6 @@ function toggleAddEmi(){
     document.getElementById('emiName').value='';
     document.getElementById('emiAmount').value='';
     document.getElementById('emiDueDay').value='';
-    var sel=document.getElementById('emiAccount');
-    sel.innerHTML='<option value="">-- Select --</option>';
-    getAccounts().forEach(function(a){
-      if(a.type==='bank'||a.type==='cash'){
-        var o=document.createElement('option');
-        o.value=a.id;o.textContent=a.label;sel.appendChild(o);
-      }
-    });
   }
 }
 function saveEmi(){
@@ -679,15 +685,14 @@ function saveEmi(){
   var name=document.getElementById('emiName').value.trim();
   var amt=parseFloat(document.getElementById('emiAmount').value);
   var day=parseInt(document.getElementById('emiDueDay').value);
-  var accId=document.getElementById('emiAccount').value;
-  if(!name||!amt||!day||!accId){showToast('Fill all fields','error');return;}
+  if(!name||!amt||!day){showToast('Fill all fields','error');return;}
   var today=new Date();
   var startYM=today.getFullYear()+'-'+(today.getMonth()+1<10?'0':'')+(today.getMonth()+1);
   if(!u.emis)u.emis=[];
   if(!u.emiPayments)u.emiPayments={};
-  u.emis.unshift({id:'e'+Date.now(),name:name,amount:amt,dueDay:day,accountId:accId,active:true,startYM:startYM});
+  u.emis.unshift({id:'e'+Date.now(),name:name,amount:amt,dueDay:day,active:true,startYM:startYM});
   if(!u.reminders)u.reminders=[];
-  u.reminders.unshift({id:'r'+Date.now(),name:name,amount:amt,dueDay:day,accountId:accId,active:true});
+  u.reminders.unshift({id:'r'+Date.now(),name:name,amount:amt,dueDay:day,accountId:'',active:true});
   saveState();showToast('EMI added!');toggleAddEmi();renderEmi();renderHome();
 }
 function renderEmiCard(e,ym,u){
@@ -759,28 +764,50 @@ function renderEmi(){
     });
   }
 }
+var pendingPayEmi={eid:null,ym:null};
 function payEmi(eid,ym){
+  pendingPayEmi={eid:eid,ym:ym};
+  var u=state.user;
+  var e=(u.emis||[]).find(function(x){return x.id===eid;});
+  document.getElementById('payEmiTitle').textContent='Pay '+e.name+' - '+fmt(e.amount);
+  var sel=document.getElementById('payEmiAccount');
+  sel.innerHTML='<option value="">-- Select Account --</option>';
+  getAccounts().forEach(function(a){
+    var o=document.createElement('option');o.value=a.id;o.textContent=a.label;sel.appendChild(o);
+  });
+  openModal('payEmiModal');
+}
+function confirmPayEmi(){
+  var accId=document.getElementById('payEmiAccount').value;
+  if(!accId){showToast('Select account','error');return;}
   var u=state.user;if(!u)return;
+  var eid=pendingPayEmi.eid,ym=pendingPayEmi.ym;
   var e=(u.emis||[]).find(function(x){return x.id===eid;});if(!e)return;
   if(!u.emiPayments)u.emiPayments={};
-  u.emiPayments[eid+'-'+ym]=true;
-  var acc=getAccounts().find(function(a){return a.id===e.accountId;});
+  u.emiPayments[eid+'-'+ym]=accId;
+  var acc=getAccounts().find(function(a){return a.id===accId;});
   if(acc){
-    if(acc.type==='bank'){u.banks=(u.banks||[]).map(function(b){return b.id===e.accountId?Object.assign({},b,{balance:b.balance-e.amount}):b;});}
+    if(acc.type==='bank'){u.banks=(u.banks||[]).map(function(b){return b.id===accId?Object.assign({},b,{balance:b.balance-e.amount}):b;});}
     else if(acc.type==='cash'){u.cashOnHand=(u.cashOnHand||0)-e.amount;}
+    else if(acc.type==='card'){u.cards=(u.cards||[]).map(function(c){return c.id===accId?Object.assign({},c,{balance:c.balance-e.amount}):c;});}
   }
-  u.transactions=[{id:Date.now(),date:todayStr(),fromAccountId:e.accountId,amount:-e.amount,isTransfer:false,mainCat:'Personal',subCat:e.name+' EMI',note:'EMI paid '+ym}].concat(u.transactions||[]);
-  saveState();showToast(e.name+' paid for '+ym+'!');renderEmi();renderHome();
+  u.transactions=[{id:Date.now(),date:todayStr(),fromAccountId:accId,amount:-e.amount,isTransfer:false,mainCat:'Personal',subCat:e.name+' EMI',note:'EMI paid '+ym}].concat(u.transactions||[]);
+  closeModal('payEmiModal');
+  saveState();showToast(e.name+' paid!');renderEmi();renderHome();
 }
 function unpayEmi(eid,ym){
   var u=state.user;if(!u)return;
   var e=(u.emis||[]).find(function(x){return x.id===eid;});if(!e)return;
+  var accId=(u.emiPayments||{})[eid+'-'+ym];
   if(!u.emiPayments)u.emiPayments={};
   delete u.emiPayments[eid+'-'+ym];
-  var acc=getAccounts().find(function(a){return a.id===e.accountId;});
-  if(acc){
-    if(acc.type==='bank'){u.banks=(u.banks||[]).map(function(b){return b.id===e.accountId?Object.assign({},b,{balance:b.balance+e.amount}):b;});}
-    else if(acc.type==='cash'){u.cashOnHand=(u.cashOnHand||0)+e.amount;}
+  if(accId&&typeof accId==='string'){
+    var acc=getAccounts().find(function(a){return a.id===accId;});
+    if(acc){
+      if(acc.type==='bank'){u.banks=(u.banks||[]).map(function(b){return b.id===accId?Object.assign({},b,{balance:b.balance+e.amount}):b;});}
+      else if(acc.type==='cash'){u.cashOnHand=(u.cashOnHand||0)+e.amount;}
+      else if(acc.type==='card'){u.cards=(u.cards||[]).map(function(c){return c.id===accId?Object.assign({},c,{balance:c.balance+e.amount}):c;});}
+    }
   }
   saveState();showToast('Payment undone');renderEmi();renderHome();
 }
