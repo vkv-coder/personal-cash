@@ -624,11 +624,26 @@ function renderReminders(){
   document.getElementById('remindersList').innerHTML=html;
 }
 function markPaid(rid){
-  var u=state.user;if(!u)return;
-  var r=(u.reminders||[]).find(function(x){return x.id===rid;});if(!r)return;
-  
-  u.transactions=[{id:Date.now(),date:todayStr(),fromAccountId:r.accountId,amount:-r.amount,isTransfer:false,mainCat:'Personal',subCat:r.name,note:'EMI paid'}].concat(u.transactions||[]);
-  saveState();showToast(r.name+' marked paid!');renderReminders();renderHome();
+
+  var u = state.user;
+  if(!u) return;
+
+  var r = (u.reminders||[]).find(function(x){return x.id===rid});
+  if(!r) return;
+
+  var today = new Date();
+  var ym = today.getFullYear() + '-' + (today.getMonth()+1);
+
+  if(!u.reminderPayments) u.reminderPayments = {};
+
+  u.reminderPayments[rid+'-'+ym] = true;
+
+  saveState();
+
+  showToast(r.name + ' paid for this month');
+
+  renderReminders();
+  renderHome();
 }
 function pauseReminder(rid){var u=state.user;if(!u)return;u.reminders=(u.reminders||[]).map(function(r){return r.id===rid?Object.assign({},r,{active:false}):r;});saveState();renderReminders();}
 function toggleReminder(rid){var u=state.user;if(!u)return;u.reminders=(u.reminders||[]).map(function(r){return r.id===rid?Object.assign({},r,{active:!r.active}):r;});saveState();renderReminders();}
