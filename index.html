@@ -609,7 +609,7 @@ function markPaid(rid){
   var r=(u.reminders||[]).find(function(x){return x.id===rid;});if(!r)return;
   applyBalance(u,r.accountId,-r.amount);
   u.transactions=[{id:Date.now(),date:todayStr(),fromAccountId:r.accountId,amount:-r.amount,isTransfer:false,mainCat:'Personal',subCat:r.name,note:'EMI paid'}].concat(u.transactions||[]);
-  saveState();showToast(r.name+' marked paid!');renderReminders();
+  saveState();showToast(r.name+' marked paid!');renderReminders();renderHome();
 }
 function pauseReminder(rid){var u=state.user;if(!u)return;u.reminders=(u.reminders||[]).map(function(r){return r.id===rid?Object.assign({},r,{active:false}):r;});saveState();renderReminders();}
 function toggleReminder(rid){var u=state.user;if(!u)return;u.reminders=(u.reminders||[]).map(function(r){return r.id===rid?Object.assign({},r,{active:!r.active}):r;});saveState();renderReminders();}
@@ -654,20 +654,17 @@ function renderSubCatList(){
 }
 
 function getPendingEmiLiability(){
-  var u=state.user;if(!u)return 0;
-  var today=new Date(),total=0;
-  var curYM=today.getFullYear()+'-'+(today.getMonth()+1<10?'0':'')+(today.getMonth()+1);
-  (u.emis||[]).forEach(function(e){
-    if(!e.active)return;
-    // Liability starts from 1st of startYM regardless of due date
-    var d=new Date(e.startYM+'-01');
-    var curMonth=new Date(curYM+'-01');
-    while(d<=curMonth){
-      var k=d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1);
-      if(!(u.emiPayments||{})[e.id+'-'+k])total+=e.amount;
-      d.setMonth(d.getMonth()+1);
+  var u = state.user;
+  if(!u) return 0;
+
+  var total = 0;
+
+  (u.reminders || []).forEach(function(r){
+    if(r.active){
+      total += r.amount;
     }
   });
+
   return total;
 }
 function toggleAddEmi(){
