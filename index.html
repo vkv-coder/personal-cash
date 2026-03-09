@@ -627,7 +627,7 @@ function renderReminders(){
 function markPaid(rid){
   var u=state.user;if(!u)return;
   var r=(u.reminders||[]).find(function(x){return x.id===rid;});if(!r)return;
-  applyBalance(u,r.accountId,-r.amount);
+  
   u.transactions=[{id:Date.now(),date:todayStr(),fromAccountId:r.accountId,amount:-r.amount,isTransfer:false,mainCat:'Personal',subCat:r.name,note:'EMI paid'}].concat(u.transactions||[]);
   saveState();showToast(r.name+' marked paid!');renderReminders();renderHome();
 }
