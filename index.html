@@ -606,7 +606,7 @@ function nth(d){var s=['th','st','nd','rd'],v=d%100;return s[(v-20)%10]||s[v]||s
 function renderReminders(){
   var u=state.user;if(!u)return;
   var reminders=u.reminders||[],accs=getAccounts(),due=dueReminders(),html='';var today=new Date();
-  var ym=today.getFullYear()+'-'+('0'+(today.getMonth()+1)).slice(-2);
+ var ym=today.getFullYear()+'-'+(today.getMonth()+1);
   if(due.length>0){
     html+='<div class="sec-hdr" style="color:#E65100">Due Within 2 Working Days</div>';
     due.forEach(function(r){
