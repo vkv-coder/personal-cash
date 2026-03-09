@@ -632,7 +632,7 @@ function renderReminders(){
   });
   document.getElementById('remindersList').innerHTML=html;
 }
-function markPaid(rid){
+  function markPaid(rid){
 
   var u = state.user;
   if(!u) return;
@@ -641,7 +641,7 @@ function markPaid(rid){
   if(!r) return;
 
   var today = new Date();
-  var ym = today.getFullYear() + '-' + ('0'+(today.getMonth()+1)).slice(-2);
+  var ym = today.getFullYear()+'-'+('0'+(today.getMonth()+1)).slice(-2);
 
   if(!u.reminderPayments) u.reminderPayments = {};
 
@@ -649,10 +649,12 @@ function markPaid(rid){
 
   saveState();
 
-  showToast(r.name + ' paid for this month');
+  showToast(r.name+' paid');
 
-  renderReminders();
   renderHome();
+  renderReminders();
+  renderEmi();
+}
 }
 function pauseReminder(rid){var u=state.user;if(!u)return;u.reminders=(u.reminders||[]).map(function(r){return r.id===rid?Object.assign({},r,{active:false}):r;});saveState();renderReminders();}
 function toggleReminder(rid){var u=state.user;if(!u)return;u.reminders=(u.reminders||[]).map(function(r){return r.id===rid?Object.assign({},r,{active:!r.active}):r;});saveState();renderReminders();}
