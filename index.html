@@ -686,17 +686,24 @@ function removeSubCat(cat,name){state.subCategories[cat]=(state.subCategories[ca
 function renderSubCatList(){
   document.getElementById('subCatList').innerHTML=MAIN_CATS.map(function(cat){return '<div class="card"><div class="card-title">'+cat+'</div><div class="chips">'+(state.subCategories[cat]||[]).map(function(s){return '<div style="display:flex;align-items:center;gap:4px;background:'+(s==='Other'?'#E3F2FD':'#BBDEFB')+';border-radius:100px;padding:5px 12px;border:1px solid #BBDEFB"><span style="font-size:12px;font-weight:700;color:#1565C0">'+s+'</span>'+(s!=='Other'?'<button onclick="removeSubCat(\''+cat+'\',\''+s+'\')" style="background:none;border:none;color:#D32F2F;font-size:15px;cursor:pointer;padding:0 0 0 3px;line-height:1">x</button>':'')+'</div>';}).join('')+'</div></div>';}).join('');
 }
-
 function getPendingEmiLiability(){
+
   var u = state.user;
   if(!u) return 0;
 
+  var today = new Date();
+  var ym = today.getFullYear() + '-' + (today.getMonth()+1);
+
   var total = 0;
 
-  (u.reminders || []).forEach(function(r){
-    if(r.active){
+  (u.reminders||[]).forEach(function(r){
+
+    if(!r.active) return;
+
+    if(!(u.reminderPayments||{})[r.id+'-'+ym]){
       total += r.amount;
     }
+
   });
 
   return total;
