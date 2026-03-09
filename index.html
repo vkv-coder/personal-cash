@@ -413,7 +413,10 @@ function renderHome(){
   var cash=u.cashOnHand||0;
   var emiLiability=getPendingEmiLiability();
   var nw=banks+cards+cash-emiLiability;
-  document.getElementById('homeNW').innerHTML='<div class="nw-lbl">Net Worth</div><div class="nw-val" style="color:'+(nw<0?'#FFCDD2':'#fff')+'">'+(nw<0?'-':'')+fmt(nw)+'</div><div class="nw-row"><div class="nw-item"><div class="sl">Banks</div><div class="sv">'+fmt(banks)+'</div></div><div class="nw-item"><div class="sl">CC Debt</div><div class="sv" style="color:'+(cards<0?'#FFCDD2':'#fff')+'">'+(cards<0?'-':'')+fmt(cards)+'</div></div><div class="nw-item"><div class="sl">Cash</div><div class="sv">'+fmt(cash)+'</div></div>'+(emiLiability>0?'<div class="nw-item"><div class="sl" style="color:#FFCDD2">EMI Due</div><div class="sv" style="color:#FFCDD2">'+fmt(emiLiability)+'</div></div>':'')+'</div>';
+  var nwColor = nw < 0 ? '#FFCDD2' : '#fff';
+var emiColor = emiLiability > 0 ? '#FFCDD2' : '#fff';
+var cardColor = cards < 0 ? '#FFCDD2' : '#fff';
+  document.getElementById('homeNW').innerHTML='<div class="nw-lbl">Net Worth</div><div class="nw-val" style="color:'+'+nwColor+'">'+(nw<0?'-':'')+fmt(nw)+'</div><div class="nw-row"><div class="nw-item"><div class="sl">Banks</div><div class="sv">'+fmt(banks)+'</div></div><div class="nw-item"><div class="sl">CC Debt</div><div class="sv" style="color:'+(cards<0?'#FFCDD2':'#fff')+'">'+(cards<0?'-':'')+fmt(cards)+'</div></div><div class="nw-item"><div class="sl">Cash</div><div class="sv">'+fmt(cash)+'</div></div>'+(emiLiability>0?'<div class="nw-item"><div class="sl" style="color:#FFCDD2">EMI Due</div><div class="sv" style="color:'+emiColor+">'+fmt(emiLiability)+'</div></div>':'')+'</div>';
   var due=dueReminders(),banner=document.getElementById('dueBanner');
   if(due.length>0){
     var rows=due.map(function(r){var d=workingDaysUntil(r.dueDay),lbl=d===0?'Today':d===1?'1 working day':'2 working days';return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><div><div style="font-size:12px;font-weight:800;color:#1A237E">'+r.name+'</div><div style="font-size:10px;font-weight:700;color:'+(d===0?'#D32F2F':'#E65100')+'">Due '+dueDateStr(r.dueDay)+' ('+lbl+')</div></div><div style="font-size:12px;font-weight:900;color:#D32F2F">-'+fmt(r.amount)+'</div></div>';}).join('');
