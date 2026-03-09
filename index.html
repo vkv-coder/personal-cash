@@ -803,12 +803,7 @@ function confirmPayEmi(){
   if(!u.emiPayments)u.emiPayments={};
   u.emiPayments[eid+'-'+ym]=accId;
   var acc=getAccounts().find(function(a){return a.id===accId;});
-  if(acc){
-    if(acc.type==='bank'){u.banks=(u.banks||[]).map(function(b){return b.id===accId?Object.assign({},b,{balance:b.balance-e.amount}):b;});}
-    else if(acc.type==='cash'){u.cashOnHand=(u.cashOnHand||0)-e.amount;}
-    else if(acc.type==='card'){u.cards=(u.cards||[]).map(function(c){return c.id===accId?Object.assign({},c,{balance:c.balance-e.amount}):c;});}
-  }
-  u.transactions=[{id:Date.now(),date:todayStr(),fromAccountId:accId,amount:-e.amount,isTransfer:false,mainCat:'Personal',subCat:e.name+' EMI',note:'EMI paid '+ym}].concat(u.transactions||[]);
+    u.transactions=[{id:Date.now(),date:todayStr(),fromAccountId:accId,amount:-e.amount,isTransfer:false,mainCat:'Personal',subCat:e.name+' EMI',note:'EMI paid '+ym}].concat(u.transactions||[]);
   closeModal('payEmiModal');
   saveState();showToast(e.name+' paid!');renderEmi();renderHome();
 }
