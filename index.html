@@ -623,6 +623,10 @@ var ym=today.getFullYear()+'-'+(today.getMonth()+1);
   if(reminders.length===0)html+='<div class="empty"><div class="ico">🔔</div><div class="etitle">No reminders yet</div><div class="esub">Tap + Add to set up EMIs and bills</div></div>';
   var rest=reminders.filter(function(r){var d=workingDaysUntil(r.dueDay);return!(r.active&&d>=0&&d<=2);});
   rest.forEach(function(r){
+     var today=new Date();
+  var ym=today.getFullYear()+'-'+(today.getMonth()+1);
+
+  if((u.reminderPayments||{})[r.id+'-'+ym]) return;
     var acc=accs.find(function(a){return a.id===r.accountId;});
     html+='<div class="card" style="margin-top:0;opacity:'+(r.active?1:0.6)+'"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><div><div style="font-size:14px;font-weight:800;color:#1A237E">'+r.name+'</div><div style="font-size:11px;color:#90A4AE">'+(acc?acc.label:'')+'  Every '+r.dueDay+nth(r.dueDay)+'</div><div style="font-size:11px;font-weight:700;color:#90A4AE">Due '+dueDateStr(r.dueDay)+'</div></div><div style="font-size:15px;font-weight:900;color:#D32F2F">-'+fmt(r.amount)+'</div></div><div style="display:flex;gap:7px"><button onclick="markPaid(\''+r.id+'\')" style="flex:1;background:#E8F5E9;border:1px solid #A5D6A7;border-radius:9px;padding:7px;color:#2E7D32;font-size:12px;font-weight:800;cursor:pointer">Mark Paid</button><button onclick="toggleReminder(\''+r.id+'\')" style="background:#E3F2FD;border:1px solid #BBDEFB;border-radius:9px;padding:7px 11px;color:#1565C0;font-size:11px;font-weight:700;cursor:pointer">'+(r.active?'Pause':'Resume')+'</button><button onclick="deleteReminder(\''+r.id+'\')" style="background:#FFEBEE;border:1px solid #FFCDD2;border-radius:9px;padding:7px 11px;color:#D32F2F;font-size:11px;font-weight:700;cursor:pointer">X</button></div></div>';
   });
