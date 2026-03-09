@@ -598,7 +598,7 @@ function saveReminder(){
   var name=document.getElementById('remName').value.trim();
   var amt=parseFloat(document.getElementById('remAmount').value);
   var day=parseInt(document.getElementById('remDueDay').value);
-    if(!name||!amt||!day||!accId){showToast('Fill all fields','error');return;}
+    if(!name||!amt||!day){showToast('Fill all fields','error');return;}
   u.reminders=[{id:'r'+Date.now(),name:name,amount:amt,dueDay:day,active:true}].concat(u.reminders||[]);
   saveState();showToast('Reminder added!');toggleAddReminder();renderReminders();
 }
