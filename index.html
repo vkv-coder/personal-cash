@@ -641,7 +641,7 @@ function renderReminders(){
   if(!r) return;
 
   var today = new Date();
-  var ym = today.getFullYear()+'-'+('0'+(today.getMonth()+1)).slice(-2);
+  var ym = today.getFullYear() + '-' + (today.getMonth()+1);
 
   if(!u.reminderPayments) u.reminderPayments = {};
 
@@ -703,7 +703,7 @@ function getPendingEmiLiability(){
   if(!u) return 0;
 
   var today = new Date();
-  var ym = today.getFullYear() + '-' + ('0'+(today.getMonth()+1)).slice(-2);
+  var ym = today.getFullYear() + '-' + (today.getMonth()+1);
 
   var total = 0;
 
