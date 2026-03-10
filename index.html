@@ -599,7 +599,7 @@ function applyBalance(u,accId,delta){
     var txSubCat = 'Transfer';
 
     if(acc && acc.type==='card'){
-      txAmount = -amt;
+      txAmount = -Math.abs(amt);   // ALWAYS negative
       txSubCat = 'Credit Card Payment';
     }
 
