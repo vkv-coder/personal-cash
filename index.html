@@ -939,16 +939,22 @@ function deleteEmi(eid){
   if(u.emiPayments){Object.keys(u.emiPayments).forEach(function(k){if(k.indexOf(eid+'-')===0)delete u.emiPayments[k];});}
   saveState();showToast('EMI deleted');renderEmi();renderHome();
 }
-function deleteTxn(id){
-
-  if(!confirm('Delete this transaction?')) return;
+  function deleteTxn(id){
 
   var u = state.user;
   if(!u) return;
 
-  u.transactions = (u.transactions||[]).filter(function(t){
-    return t.id !== id;
+  if(!confirm('Delete this transaction?')) return;
+
+  var newList = [];
+
+  (u.transactions || []).forEach(function(t){
+    if(String(t.id) !== String(id)){
+      newList.push(t);
+    }
   });
+
+  u.transactions = newList;
 
   saveState();
 
