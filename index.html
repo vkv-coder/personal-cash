@@ -571,6 +571,7 @@ function saveTxn(){
     var note=document.getElementById('txnTransferNote').value.trim();
     if(!toId){showToast('Select destination account','error');return;}
     if(!note){showToast('Note is mandatory for transfer','error');return;}
+    var acc=getAccounts().find(function(a){return a.id===toId});
     applyBalance(u,txnCtx.accountId,-amt);applyBalance(u,toId,amt);
     u.transactions=[{id:Date.now(),date:date,fromAccountId:txnCtx.accountId,toAccountId:toId,amount:amt,isTransfer:true,mainCat:'',subCat:'Transfer',note:note}].concat(u.transactions||[]);
   }else{
