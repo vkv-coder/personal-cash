@@ -351,6 +351,7 @@ function getAccounts(){
   (u.banks||[]).forEach(function(b){list.push({id:b.id,type:'bank',label:b.name+' ...'+b.last4,balance:b.balance});});
   (u.cards||[]).forEach(function(c){list.push({id:c.id,type:'card',label:c.name+' ...'+c.last4,balance:c.balance});});
   list.push({id:'cash',type:'cash',label:'Cash on Hand',balance:u.cashOnHand||0});
+  list.push({id:'investment',type:'investment',label:'Investment Fund',balance:u.investment||0});
   return list;
 }
 function dueReminders(){
