@@ -427,7 +427,9 @@ var monthlyExpense = (u.transactions || [])
 var emiColor = emiLiability > 0 ? '#FFCDD2' : '#fff';
 var cardColor = cards < 0 ? '#FFCDD2' : '#fff';
   document.getElementById('homeNW').innerHTML =
-'<div class="nw-lbl">Net Worth</div>'+
+   '<div class="nw-lbl">Monthly Expense</div>'+
+'<div class="nw-val" style="font-size:16px;color:#FFCDD2">-'+fmt(monthlyExpense)+'</div>'+
+'<div class="nw-lbl" style="margin-top:6px">Net Worth</div>'+
 '<div class="nw-val" style="color:'+nwColor+'">'+(nw<0?'-':'')+fmt(nw)+'</div>'+
 '<div class="nw-row">'+
 '<div class="nw-item"><div class="sl">Banks</div><div class="sv">'+fmt(banks)+'</div></div>'+
