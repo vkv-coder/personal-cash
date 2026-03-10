@@ -558,6 +558,7 @@ function renderToAccountOptions(){
 }
 function applyBalance(u,accId,delta){
   if(accId==='cash'){u.cashOnHand=(u.cashOnHand||0)+delta;return;}
+  if(accId==='investment'){u.investment=(u.investment||0)+delta;return;}
   u.banks=(u.banks||[]).map(function(b){return b.id===accId?Object.assign({},b,{balance:b.balance+delta}):b;});
   u.cards=(u.cards||[]).map(function(c){return c.id===accId?Object.assign({},c,{balance:c.balance+delta}):c;});
 }
