@@ -414,7 +414,7 @@ function renderHome(){
   var cash=u.cashOnHand||0;
   var investment=u.investment||0;
   var emiLiability=getPendingEmiLiability();
-  var nw=banks+cards+cash-emiLiability;
+  var nw=banks+cards+cash+investment-emiLiability;
   var now = new Date();
 var ym = now.getFullYear() + '-' + (now.getMonth()+1 < 10 ? '0':'') + (now.getMonth()+1);
 
