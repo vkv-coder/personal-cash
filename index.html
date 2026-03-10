@@ -573,8 +573,25 @@ function saveTxn(){
     if(!note){showToast('Note is mandatory for transfer','error');return;}
     var acc=getAccounts().find(function(a){return a.id===toId});
     applyBalance(u,txnCtx.accountId,-amt);applyBalance(u,toId,amt);
-    u.transactions=[{id:Date.now(),date:date,fromAccountId:txnCtx.accountId,toAccountId:toId,amount:(acc && acc.type==='card' ? -amt : amt),isTransfer:true,mainCat:'Transfer',subCat:(acc && acc.type==='card' ? 'Credit Card Payment' : 'Transfer'),note:note}].concat(u.transactions||[]);
-  }else{
+    var txAmount = amt;
+var txSubCat = 'Transfer';
+
+if(acc && acc.type==='card'){
+  txAmount = -amt;
+  txSubCat = 'Credit Card Payment';
+}
+
+u.transactions=[{
+  id:Date.now(),
+  date:date,
+  fromAccountId:txnCtx.accountId,
+  toAccountId:toId,
+  amount:txAmount,
+  isTransfer:true,
+  mainCat:'Transfer',
+  subCat:txSubCat,
+  note:note
+}].concat(u.transactions||[]);
     if(!txnSubCat){showToast('Select sub-category','error');return;}
     if(txnSubCat==='Other'&&!txnOtherText){showToast('Describe the transaction','error');return;}
     var finalSubCat=txnSubCat==='Other'?txnOtherText:txnSubCat;
