@@ -672,7 +672,7 @@ function setRptCat(cat){rptCat=cat;renderRptCatChips();renderReports();}
 function renderReports(){
   var u=state.user;if(!u)return;
   var from=document.getElementById('rptFrom').value,to=document.getElementById('rptTo').value,accId=document.getElementById('rptAccount').value;
-  var txns=(u.transactions||[]).filter(function(t){if(t.isTransfer)return false;return t.date>=from&&t.date<=to&&(accId==='all'||t.fromAccountId===accId)&&(rptCat==='all'||t.mainCat===rptCat);});
+  var txns=(u.transactions||[]).filter(function(t){if(t.isTransfer && t.subCat!=='Credit Card Payment') return false;return t.date>=from&&t.date<=to&&(accId==='all'||t.fromAccountId===accId)&&(rptCat==='all'||t.mainCat===rptCat);});
   var totalIn=txns.filter(function(t){return t.amount>0;}).reduce(function(s,t){return s+t.amount;},0);
   var totalOut=txns.filter(function(t){return t.amount<0;}).reduce(function(s,t){return s+t.amount;},0);
   document.getElementById('rptSummary').innerHTML='<div class="rpt-card" style="background:#E8F5E9;border:1px solid #A5D6A7"><div style="font-size:10px;color:#2E7D32;font-weight:900;text-transform:uppercase;letter-spacing:1px">Money In</div><div style="font-size:20px;font-weight:900;color:#2E7D32;margin-top:4px">'+fmt(totalIn)+'</div></div><div class="rpt-card" style="background:#FFEBEE;border:1px solid #FFCDD2"><div style="font-size:10px;color:#D32F2F;font-weight:900;text-transform:uppercase;letter-spacing:1px">Money Out</div><div style="font-size:20px;font-weight:900;color:#D32F2F;margin-top:4px">-'+fmt(Math.abs(totalOut))+'</div></div>';
