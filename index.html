@@ -423,6 +423,11 @@ var monthlyExpense = (u.transactions || [])
     return !t.isTransfer && t.amount < 0 && t.date && t.date.startsWith(ym);
   })
   .reduce(function(s,t){ return s + Math.abs(t.amount); },0);
+  var monthlyInvestment = (u.transactions || [])
+  .filter(function(t){
+    return t.isTransfer && t.toAccountId==='investment' && t.date && t.date.startsWith(ym);
+  })
+  .reduce(function(s,t){ return s + Math.abs(t.amount); },0);
   var nwColor = nw < 0 ? '#FFCDD2' : '#fff';
 var emiColor = emiLiability > 0 ? '#FFCDD2' : '#fff';
 var cardColor = cards < 0 ? '#FFCDD2' : '#fff';
