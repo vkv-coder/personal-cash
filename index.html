@@ -432,7 +432,7 @@ var cardColor = cards < 0 ? '#FFCDD2' : '#fff';
 '<div class="nw-row">'+
 '<div class="nw-item"><div class="sl">Banks</div><div class="sv">'+fmt(banks)+'</div></div>'+
 '<div class="nw-item"><div class="sl">CC Debt</div><div class="sv" style="color:'+(cards<0?'#FFCDD2':'#fff')+'">'+(cards<0?'-':'')+fmt(cards)+'</div></div>'+
-'<div class="nw-item"><div class="sl">Cash</div><div class="sv">'+fmt(cash)+'</div></div>'+
+'<div class="nw-item"><div class="sl">Cash</div><div class="sv">'+fmt(cash)+'</div></div>'+'<div class="nw-item"><div class="sl">Invest</div><div class="sv">'+fmt(investment)+'</div></div>'+
 (emiLiability>0?'<div class="nw-item"><div class="sl" style="color:#FFCDD2">EMI Due</div><div class="sv" style="color:'+emiColor+'">'+fmt(emiLiability)+'</div></div>':'')+
 '</div>';
 
