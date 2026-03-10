@@ -412,6 +412,7 @@ function renderHome(){
   var banks=(u.banks||[]).reduce(function(s,b){return s+b.balance;},0);
   var cards=(u.cards||[]).reduce(function(s,c){return s+c.balance;},0);
   var cash=u.cashOnHand||0;
+  var investment=u.investment||0;
   var emiLiability=getPendingEmiLiability();
   var nw=banks+cards+cash-emiLiability;
   var now = new Date();
