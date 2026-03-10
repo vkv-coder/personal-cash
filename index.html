@@ -561,46 +561,95 @@ function applyBalance(u,accId,delta){
   u.banks=(u.banks||[]).map(function(b){return b.id===accId?Object.assign({},b,{balance:b.balance+delta}):b;});
   u.cards=(u.cards||[]).map(function(c){return c.id===accId?Object.assign({},c,{balance:c.balance+delta}):c;});
 }
-function saveTxn(){
-  var u=state.user;if(!u)return;
+  function saveTxn(){
+  var u=state.user;
+  if(!u) return;
+
   var amt=parseFloat(document.getElementById('txnAmount').value);
-  if(!amt||amt<=0){showToast('Enter a valid amount','error');return;}
+  if(!amt || amt<=0){
+    showToast('Enter a valid amount','error');
+    return;
+  }
+
   var date=document.getElementById('txnDate').value;
+
   if(txnIsTransfer){
+
     var toId=document.getElementById('toAccountSelect').value;
     var note=document.getElementById('txnTransferNote').value.trim();
-    if(!toId){showToast('Select destination account','error');return;}
-    if(!note){showToast('Note is mandatory for transfer','error');return;}
-    var acc=getAccounts().find(function(a){return a.id===toId});
-    applyBalance(u,txnCtx.accountId,-amt);applyBalance(u,toId,amt);
+
+    if(!toId){
+      showToast('Select destination account','error');
+      return;
+    }
+
+    if(!note){
+      showToast('Note is mandatory for transfer','error');
+      return;
+    }
+
+    var acc=getAccounts().find(function(a){
+      return a.id===toId;
+    });
+
+    applyBalance(u,txnCtx.accountId,-amt);
+    applyBalance(u,toId,amt);
+
     var txAmount = amt;
-var txSubCat = 'Transfer';
+    var txSubCat = 'Transfer';
 
-if(acc && acc.type==='card'){
-  txAmount = -amt;
-  txSubCat = 'Credit Card Payment';
-}
+    if(acc && acc.type==='card'){
+      txAmount = -amt;
+      txSubCat = 'Credit Card Payment';
+    }
 
-u.transactions=[{
-  id:Date.now(),
-  date:date,
-  fromAccountId:txnCtx.accountId,
-  toAccountId:toId,
-  amount:txAmount,
-  isTransfer:true,
-  mainCat:'Transfer',
-  subCat:txSubCat,
-  note:note
-}].concat(u.transactions||[]);
-    if(!txnSubCat){showToast('Select sub-category','error');return;}
-    if(txnSubCat==='Other'&&!txnOtherText){showToast('Describe the transaction','error');return;}
-    var finalSubCat=txnSubCat==='Other'?txnOtherText:txnSubCat;
-    var finalAmt=txnIsExpense?-amt:amt;
+    u.transactions=[{
+      id:Date.now(),
+      date:date,
+      fromAccountId:txnCtx.accountId,
+      toAccountId:toId,
+      amount:txAmount,
+      isTransfer:true,
+      mainCat:'Transfer',
+      subCat:txSubCat,
+      note:note
+    }].concat(u.transactions||[]);
+
+  }else{
+
+    if(!txnSubCat){
+      showToast('Select sub-category','error');
+      return;
+    }
+
+    if(txnSubCat==='Other' && !txnOtherText){
+      showToast('Describe the transaction','error');
+      return;
+    }
+
+    var finalSubCat = txnSubCat==='Other' ? txnOtherText : txnSubCat;
+    var finalAmt = txnIsExpense ? -amt : amt;
+
     applyBalance(u,txnCtx.accountId,finalAmt);
+
     var note2=document.getElementById('txnNote').value.trim();
-    u.transactions=[{id:Date.now(),date:date,fromAccountId:txnCtx.accountId,amount:finalAmt,isTransfer:false,mainCat:txnMainCat,subCat:finalSubCat,note:note2}].concat(u.transactions||[]);
+
+    u.transactions=[{
+      id:Date.now(),
+      date:date,
+      fromAccountId:txnCtx.accountId,
+      amount:finalAmt,
+      isTransfer:false,
+      mainCat:txnMainCat,
+      subCat:finalSubCat,
+      note:note2
+    }].concat(u.transactions||[]);
+
   }
-  saveState();showToast('Transaction saved!');goBack();
+
+  saveState();
+  showToast('Transaction saved!');
+  goBack();
 }
 function toggleAddReminder(){
   var f=document.getElementById('addReminderForm');
