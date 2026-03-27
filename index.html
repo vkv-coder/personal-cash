@@ -513,10 +513,11 @@ function renderHome(){
   }else banner.innerHTML='';
 
   var activeRem=(u.reminders||[]).filter(function(r){return r.active;}).length,dueCount=due.length;
+  var remSubText=dueCount>0?dueCount+' Due':activeRem>0?'0 Due this month':activeRem+' active';
   document.getElementById('homeMenu').innerHTML=
     '<div class="mi" onclick="go(\'s-accounts\')"><div class="mi-icon" style="background:#E3F2FD">🏦</div><div style="flex:1"><div class="mi-title">Accounts</div><div class="mi-sub">'+((u.banks||[]).length+(u.cards||[]).length+1)+' accounts</div></div><div class="mi-arrow">&rsaquo;</div></div>'+
     '<div class="mi" onclick="go(\'s-reports\')"><div class="mi-icon" style="background:#F3E5F5">📈</div><div style="flex:1"><div class="mi-title">Reports</div><div class="mi-sub">Expenses &amp; income</div></div><div class="mi-arrow">&rsaquo;</div></div>'+
-    '<div class="mi" onclick="go(\'s-reminders\')"><div class="mi-icon" style="background:#FFF8E1">🔔</div><div style="flex:1"><div class="mi-title">EMI &amp; Reminders</div><div class="mi-sub">'+activeRem+' active</div></div>'+(dueCount>0?'<div class="mi-badge">'+dueCount+' Due</div>':'<div class="mi-arrow">&rsaquo;</div>')+'</div>'+
+    '<div class="mi" onclick="go(\'s-reminders\')"><div class="mi-icon" style="background:#FFF8E1">🔔</div><div style="flex:1"><div class="mi-title">EMI &amp; Reminders</div><div class="mi-sub">'+remSubText+'</div></div>'+(dueCount>0?'<div class="mi-badge">'+dueCount+' Due</div>':'<div class="mi-arrow">&rsaquo;</div>')+'</div>'+
     '<div class="mi" onclick="go(\'s-settings\')"><div class="mi-icon" style="background:#FFF3E0">⚙️</div><div style="flex:1"><div class="mi-title">Settings</div><div class="mi-sub">Edit name &middot; Sub-categories</div></div><div class="mi-arrow">&rsaquo;</div></div>'+
     '<div class="mi" onclick="doLogout()"><div class="mi-icon" style="background:#FFEBEE">🚪</div><div style="flex:1"><div class="mi-title" style="color:#D32F2F">Log Out</div><div class="mi-sub">'+u.email+'</div></div></div>';
 }
