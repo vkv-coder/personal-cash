@@ -164,7 +164,7 @@ textarea.inp{resize:none;height:72px;}
 <!-- HOME -->
 <div class="screen" id="s-home">
   <div class="hdr">
-    <div style="text-align:center;font-size:18px;font-weight:900;color:#fff;letter-spacing:0.5px;margin-bottom:8px">मेरा पैसा मेरा हिसाब</div>
+    <div class="app-tag">मेरा पैसा मेरा हिसाब</div>
     <div class="user-row">
       <div class="username" id="homeUsername">vkv</div>
       <div class="mode-tag">Personal</div>
@@ -231,9 +231,13 @@ textarea.inp{resize:none;height:72px;}
       </div>
     </div>
     <div id="txnTypeRow" class="fg">
-      <div class="tog-row">
+      <div class="tog-row" id="togRowExpInc">
         <button class="tog on-red on" id="tog-exp" onclick="setExpInc(true)">Expense</button>
         <button class="tog" id="tog-inc" onclick="setExpInc(false)">Income</button>
+      </div>
+      <div class="tog-row" id="togRowDepWith" style="display:none">
+        <button class="tog on-green on" id="tog-dep" onclick="setDepWith(true)">Deposit</button>
+        <button class="tog" id="tog-with" onclick="setDepWith(false)">Withdrawal</button>
       </div>
     </div>
     <div id="txnCatSection">
@@ -357,11 +361,12 @@ textarea.inp{resize:none;height:72px;}
 <script>
 var SK='pcm_v3';
 var DEF_SUBCATS={Personal:['Food & Dining','Transport & Fuel','Shopping & Clothes','Bills & Utilities','EMI & Loans','Health & Medical','Entertainment','Salary & Income','Other'],Business:['Office Supplies','Travel & Stay','Client Entertainment','Software & Tools','Salary Paid','Business Income','Other'],Family:['Groceries','School Fees','Family Outing','Home Maintenance','Medical','Other']};
+var INVEST_SUBCATS=['FD (Fixed Deposit)','Mutual Fund','SIP','Equity / Stocks','Post Office','Recurring Deposit','Other'];
 var MAIN_CATS=['Personal','Business','Family'];
 var state={initialized:false,user:null,subCategories:JSON.parse(JSON.stringify(DEF_SUBCATS))};
 var navStack=[],currentScreen='splash';
 var txnCtx={accountId:'',accountLabel:'',balance:0};
-var txnIsTransfer=false,txnIsExpense=true,txnMainCat='Personal',txnSubCat='',txnOtherText='';
+var txnIsTransfer=false,txnIsExpense=true,txnIsDeposit=true,txnMainCat='Personal',txnSubCat='',txnOtherText='';
 var editBalCtx=null,settingCat='Personal',rptCat='all',accType='bank';
 
 function loadState(){try{var d=localStorage.getItem(SK);if(d)state=JSON.parse(d);}catch(e){}}
@@ -456,8 +461,8 @@ function renderHome(){
   var nw=banks+cards+cash+investment-emiLiability;
   var now=new Date();
   var ym=now.getFullYear()+'-'+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1);
-  var monthlyExpense=(u.transactions||[]).filter(function(t){return !t.isTransfer&&t.amount<0&&t.date&&t.date.startsWith(ym);}).reduce(function(s,t){return s+Math.abs(t.amount);},0);
-  var monthlyInvestment=(u.transactions||[]).filter(function(t){return t.isTransfer&&t.toAccountId==='investment'&&t.date&&t.date.startsWith(ym);}).reduce(function(s,t){return s+Math.abs(t.amount);},0);
+  var monthlyExpense=(u.transactions||[]).filter(function(t){return !t.isTransfer&&t.amount<0&&!t.isInvestment&&t.date&&t.date.startsWith(ym);}).reduce(function(s,t){return s+Math.abs(t.amount);},0);
+  var monthlyInvestment=(u.transactions||[]).filter(function(t){return t.isInvestment&&t.investType==='deposit'&&t.date&&t.date.startsWith(ym);}).reduce(function(s,t){return s+Math.abs(t.amount);},0);
   var monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var monthLabel=monthNames[now.getMonth()]+' '+now.getFullYear();
   var nwColor=nw<0?'#FFCDD2':'#fff';
@@ -539,19 +544,43 @@ function saveEditBal(){
   else u.cashOnHand=val;
   saveState();showToast('Balance updated!');closeModal('editBalModal');renderAccounts();
 }
-function openTxn(accountId,accountLabel,balance){txnCtx={accountId:accountId,accountLabel:accountLabel,balance:balance};txnIsTransfer=false;txnIsExpense=true;txnMainCat='Personal';txnSubCat='';txnOtherText='';go('s-newTxn');}
+function openTxn(accountId,accountLabel,balance){txnCtx={accountId:accountId,accountLabel:accountLabel,balance:balance,isInvestment:accountId==='investment'};txnIsTransfer=false;txnIsExpense=true;txnIsDeposit=true;txnMainCat='Personal';txnSubCat='';txnOtherText='';go('s-newTxn');}
 function renderTxnForm(){
+  var isInv=txnCtx.isInvestment;
   document.getElementById('txnAccLabel').textContent=txnCtx.accountLabel;
   document.getElementById('txnAccBal').textContent='Bal: '+(txnCtx.balance<0?'-':'')+fmt(txnCtx.balance);
   document.getElementById('txnDate').value=todayStr();document.getElementById('txnAmount').value='';document.getElementById('txnNote').value='';document.getElementById('txnTransferNote').value='';document.getElementById('otherSelectedNote').style.display='none';
-  setTransfer(false);renderMainCatChips();updateSubCatOptions();
+  // Hide Transfer toggle for investment
+  document.getElementById('tog-txn-no').parentElement.parentElement.style.display=isInv?'none':'block';
+  // Show deposit/withdrawal for investment, expense/income for others
+  document.getElementById('togRowExpInc').style.display=isInv?'none':'flex';
+  document.getElementById('togRowDepWith').style.display=isInv?'flex':'none';
+  // Show correct category section
+  document.getElementById('txnCatSection').style.display='block';
+  document.getElementById('txnTransferSection').style.display='none';
+  document.getElementById('txnNoteSection').style.display='block';
+  if(isInv){setDepWith(true);updateInvestSubCatOptions();}
+  else{setTransfer(false);renderMainCatChips();updateSubCatOptions();}
 }
 function setTransfer(val){txnIsTransfer=val;document.getElementById('tog-txn-no').className='tog'+(val?'':' on');document.getElementById('tog-txn-yes').className='tog'+(val?' on-green on':'');document.getElementById('txnTypeRow').style.display=val?'none':'block';document.getElementById('txnCatSection').style.display=val?'none':'block';document.getElementById('txnTransferSection').style.display=val?'block':'none';document.getElementById('txnNoteSection').style.display=val?'none':'block';if(val)renderToAccountOptions();}
 function setExpInc(isExp){txnIsExpense=isExp;document.getElementById('tog-exp').className='tog'+(isExp?' on-red on':'');document.getElementById('tog-inc').className='tog'+(!isExp?' on-green on':'');}
+function setDepWith(isDep){txnIsDeposit=isDep;document.getElementById('tog-dep').className='tog'+(isDep?' on-green on':'');document.getElementById('tog-with').className='tog'+(!isDep?' on-red on':'');}
+function updateInvestSubCatOptions(){
+  // Hide main cat chips, show invest sub-cats directly
+  document.getElementById('mainCatChips').innerHTML='';
+  document.querySelector('.cat-lbl') && (document.querySelector('.cat-lbl').style.display='none');
+  var sel=document.getElementById('subCatSelect');
+  sel.innerHTML='<option value="">-- Select type --</option>'+INVEST_SUBCATS.map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('');
+  sel.value='';txnSubCat='';
+}
 function renderMainCatChips(){document.getElementById('mainCatChips').innerHTML=MAIN_CATS.map(function(c){return '<div class="chip'+(c===txnMainCat?' on':'')+'" onclick="selectMainCat(\''+c+'\')">'+c+'</div>';}).join('');}
 function selectMainCat(cat){txnMainCat=cat;txnSubCat='';document.getElementById('otherSelectedNote').style.display='none';renderMainCatChips();updateSubCatOptions();}
 function updateSubCatOptions(){var sel=document.getElementById('subCatSelect');var cats=state.subCategories[txnMainCat]||[];sel.innerHTML='<option value="">-- Select --</option>'+cats.map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('');sel.value='';}
-function onSubCatChange(val){if(val==='Other'){document.getElementById('otherText').value=txnOtherText||'';openModal('otherModal');document.getElementById('subCatSelect').value='';}else{txnSubCat=val;document.getElementById('otherSelectedNote').style.display='none';}}
+function onSubCatChange(val){
+  txnSubCat=val;
+  if(!txnCtx.isInvestment&&val==='Other'){document.getElementById('otherText').value=txnOtherText||'';openModal('otherModal');document.getElementById('subCatSelect').value='';}
+  else{document.getElementById('otherSelectedNote').style.display='none';}
+}
 function confirmOther(){var txt=document.getElementById('otherText').value.trim();if(!txt){showToast('Enter description','error');return;}txnOtherText=txt;txnSubCat='Other';closeModal('otherModal');var note=document.getElementById('otherSelectedNote');note.textContent='"'+txt+'"';note.style.display='block';document.getElementById('subCatSelect').value='Other';}
 function cancelOther(){txnSubCat='';txnOtherText='';document.getElementById('subCatSelect').value='';closeModal('otherModal');}
 function renderToAccountOptions(){var others=getAccounts().filter(function(a){return a.id!==txnCtx.accountId;});document.getElementById('toAccountSelect').innerHTML='<option value="">-- Select destination --</option>'+others.map(function(a){return '<option value="'+a.id+'">'+a.label+'</option>';}).join('');}
@@ -560,6 +589,7 @@ function saveTxn(){
   var u=state.user;if(!u)return;
   var amt=parseFloat(document.getElementById('txnAmount').value);if(!amt||amt<=0){showToast('Enter a valid amount','error');return;}
   var date=document.getElementById('txnDate').value;
+  var isInv=txnCtx.isInvestment;
   if(txnIsTransfer){
     var toId=document.getElementById('toAccountSelect').value;var note=document.getElementById('txnTransferNote').value.trim();
     if(!toId){showToast('Select destination account','error');return;}if(!note){showToast('Note is mandatory for transfer','error');return;}
@@ -567,12 +597,19 @@ function saveTxn(){
     applyBalance(u,txnCtx.accountId,-amt);applyBalance(u,toId,amt);
     var txAmount=amt,txSubCat='Transfer';if(acc&&acc.type==='card'){txAmount=-Math.abs(amt);txSubCat='Credit Card Payment';}
     u.transactions=[{id:Date.now(),date:date,fromAccountId:txnCtx.accountId,toAccountId:toId,amount:txAmount,isTransfer:true,mainCat:'Transfer',subCat:txSubCat,note:note}].concat(u.transactions||[]);
+  }else if(isInv){
+    // Investment: Deposit or Withdrawal
+    if(!txnSubCat){showToast('Select investment type','error');return;}
+    var finalAmt=txnIsDeposit?amt:-amt;
+    applyBalance(u,'investment',finalAmt);
+    var note3=document.getElementById('txnNote').value.trim();
+    u.transactions=[{id:Date.now(),date:date,fromAccountId:'investment',amount:finalAmt,isTransfer:false,isInvestment:true,mainCat:'Investment',subCat:txnSubCat,investType:txnIsDeposit?'deposit':'withdrawal',note:note3}].concat(u.transactions||[]);
   }else{
     if(!txnSubCat){showToast('Select sub-category','error');return;}if(txnSubCat==='Other'&&!txnOtherText){showToast('Describe the transaction','error');return;}
-    var finalSubCat=txnSubCat==='Other'?txnOtherText:txnSubCat,finalAmt=txnIsExpense?-amt:amt;
-    applyBalance(u,txnCtx.accountId,finalAmt);
+    var finalSubCat=txnSubCat==='Other'?txnOtherText:txnSubCat,finalAmt2=txnIsExpense?-amt:amt;
+    applyBalance(u,txnCtx.accountId,finalAmt2);
     var note2=document.getElementById('txnNote').value.trim();
-    u.transactions=[{id:Date.now(),date:date,fromAccountId:txnCtx.accountId,amount:finalAmt,isTransfer:false,mainCat:txnMainCat,subCat:finalSubCat,note:note2}].concat(u.transactions||[]);
+    u.transactions=[{id:Date.now(),date:date,fromAccountId:txnCtx.accountId,amount:finalAmt2,isTransfer:false,mainCat:txnMainCat,subCat:finalSubCat,note:note2}].concat(u.transactions||[]);
   }
   saveState();showToast('Transaction saved!');goBack();
 }
