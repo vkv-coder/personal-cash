@@ -164,7 +164,7 @@ textarea.inp{resize:none;height:72px;}
 <!-- HOME -->
 <div class="screen" id="s-home">
   <div class="hdr">
-    <div style="text-align:center;font-size:20px;font-weight:900;color:#fff;letter-spacing:0.5px;margin-bottom:8px;width:100%">मेरा पैसा मेरा हिसाब</div>
+    <div class="app-tag">मेरा पैसा मेरा हिसाब</div>
     <div class="user-row">
       <div class="username" id="homeUsername">vkv</div>
       <div class="mode-tag">Personal</div>
@@ -257,6 +257,12 @@ textarea.inp{resize:none;height:72px;}
       </div>
       <div class="fg"><label class="lbl" style="color:#D32F2F">Note * (mandatory for transfer)</label><input class="inp" id="txnTransferNote" placeholder="e.g. Moving funds for EMI..."/></div>
       <div class="info" style="margin:0 0 10px">Transfer is not counted as income or expense</div>
+    </div>
+    <!-- Investment source/destination account -->
+    <div id="txnInvestAccountSection" style="display:none">
+      <div class="fg"><label class="lbl" id="investAccLabel">From Account (money source) *</label>
+        <select class="inp" id="investAccountSelect"><option value="">-- Select Account --</option></select>
+      </div>
     </div>
     <div id="txnNoteSection" class="fg"><label class="lbl">Note (optional)</label><input class="inp" id="txnNote" placeholder="Add a note..."/></div>
     <div class="row">
@@ -550,21 +556,33 @@ function renderTxnForm(){
   document.getElementById('txnAccLabel').textContent=txnCtx.accountLabel;
   document.getElementById('txnAccBal').textContent='Bal: '+(txnCtx.balance<0?'-':'')+fmt(txnCtx.balance);
   document.getElementById('txnDate').value=todayStr();document.getElementById('txnAmount').value='';document.getElementById('txnNote').value='';document.getElementById('txnTransferNote').value='';document.getElementById('otherSelectedNote').style.display='none';
-  // Hide Transfer toggle for investment
   document.getElementById('tog-txn-no').parentElement.parentElement.style.display=isInv?'none':'block';
-  // Show deposit/withdrawal for investment, expense/income for others
   document.getElementById('togRowExpInc').style.display=isInv?'none':'flex';
   document.getElementById('togRowDepWith').style.display=isInv?'flex':'none';
-  // Show correct category section
   document.getElementById('txnCatSection').style.display='block';
   document.getElementById('txnTransferSection').style.display='none';
   document.getElementById('txnNoteSection').style.display='block';
-  if(isInv){setDepWith(true);updateInvestSubCatOptions();}
+  document.getElementById('txnInvestAccountSection').style.display=isInv?'block':'none';
+  if(isInv){setDepWith(true);updateInvestSubCatOptions();renderInvestAccountOptions();}
   else{setTransfer(false);renderMainCatChips();updateSubCatOptions();}
 }
 function setTransfer(val){txnIsTransfer=val;document.getElementById('tog-txn-no').className='tog'+(val?'':' on');document.getElementById('tog-txn-yes').className='tog'+(val?' on-green on':'');document.getElementById('txnTypeRow').style.display=val?'none':'block';document.getElementById('txnCatSection').style.display=val?'none':'block';document.getElementById('txnTransferSection').style.display=val?'block':'none';document.getElementById('txnNoteSection').style.display=val?'none':'block';if(val)renderToAccountOptions();}
 function setExpInc(isExp){txnIsExpense=isExp;document.getElementById('tog-exp').className='tog'+(isExp?' on-red on':'');document.getElementById('tog-inc').className='tog'+(!isExp?' on-green on':'');}
-function setDepWith(isDep){txnIsDeposit=isDep;document.getElementById('tog-dep').className='tog'+(isDep?' on-green on':'');document.getElementById('tog-with').className='tog'+(!isDep?' on-red on':'');}
+function setDepWith(isDep){
+  txnIsDeposit=isDep;
+  document.getElementById('tog-dep').className='tog'+(isDep?' on-green on':'');
+  document.getElementById('tog-with').className='tog'+(!isDep?' on-red on':'');
+  if(txnCtx.isInvestment){
+    document.getElementById('investAccLabel').textContent=isDep?'From Account (money source) *':'To Account (money destination) *';
+    renderInvestAccountOptions();
+  }
+}
+function renderInvestAccountOptions(){
+  var accs=getAccounts().filter(function(a){return a.id!=='investment';});
+  var sel=document.getElementById('investAccountSelect');
+  sel.innerHTML='<option value="">-- Select Account --</option>'+accs.map(function(a){return '<option value="'+a.id+'">'+a.label+' ('+fmt(a.balance)+')</option>';}).join('');
+  sel.value='';
+}
 function updateInvestSubCatOptions(){
   // Hide main cat chips, show invest sub-cats directly
   document.getElementById('mainCatChips').innerHTML='';
@@ -598,12 +616,14 @@ function saveTxn(){
     var txAmount=amt,txSubCat='Transfer';if(acc&&acc.type==='card'){txAmount=-Math.abs(amt);txSubCat='Credit Card Payment';}
     u.transactions=[{id:Date.now(),date:date,fromAccountId:txnCtx.accountId,toAccountId:toId,amount:txAmount,isTransfer:true,mainCat:'Transfer',subCat:txSubCat,note:note}].concat(u.transactions||[]);
   }else if(isInv){
-    // Investment: Deposit or Withdrawal
     if(!txnSubCat){showToast('Select investment type','error');return;}
+    var linkedAccId=document.getElementById('investAccountSelect').value;
+    if(!linkedAccId){showToast(txnIsDeposit?'Select source account':'Select destination account','error');return;}
     var finalAmt=txnIsDeposit?amt:-amt;
     applyBalance(u,'investment',finalAmt);
+    applyBalance(u,linkedAccId,-finalAmt);
     var note3=document.getElementById('txnNote').value.trim();
-    u.transactions=[{id:Date.now(),date:date,fromAccountId:'investment',amount:finalAmt,isTransfer:false,isInvestment:true,mainCat:'Investment',subCat:txnSubCat,investType:txnIsDeposit?'deposit':'withdrawal',note:note3}].concat(u.transactions||[]);
+    u.transactions=[{id:Date.now(),date:date,fromAccountId:linkedAccId,toAccountId:'investment',amount:finalAmt,isTransfer:false,isInvestment:true,mainCat:'Investment',subCat:txnSubCat,investType:txnIsDeposit?'deposit':'withdrawal',note:note3}].concat(u.transactions||[]);
   }else{
     if(!txnSubCat){showToast('Select sub-category','error');return;}if(txnSubCat==='Other'&&!txnOtherText){showToast('Describe the transaction','error');return;}
     var finalSubCat=txnSubCat==='Other'?txnOtherText:txnSubCat,finalAmt2=txnIsExpense?-amt:amt;
