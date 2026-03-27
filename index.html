@@ -639,7 +639,21 @@ function saveTxn(){
   saveState();showToast('Transaction saved!');goBack();
 }
 function toggleAddReminder(){var f=document.getElementById('addReminderForm');f.style.display=f.style.display==='none'?'block':'none';if(f.style.display==='block'){document.getElementById('remName').value='';document.getElementById('remAmount').value='';document.getElementById('remDueDay').value='';}}
-function saveReminder(){var u=state.user;if(!u)return;var name=document.getElementById('remName').value.trim();var amt=parseFloat(document.getElementById('remAmount').value);var day=parseInt(document.getElementById('remDueDay').value);if(!name||!amt||!day){showToast('Fill all fields','error');return;}u.reminders=[{id:'r'+Date.now(),name:name,amount:amt,dueDay:day,active:true}].concat(u.reminders||[]);saveState();showToast('Reminder added!');toggleAddReminder();renderReminders();}
+function saveReminder(){
+  var u=state.user;if(!u)return;
+  var name=document.getElementById('remName').value.trim();
+  var amt=parseFloat(document.getElementById('remAmount').value);
+  var day=parseInt(document.getElementById('remDueDay').value);
+  if(!name||!amt||!day){showToast('Fill all fields','error');return;}
+  if(day<1||day>31){showToast('Due day must be 1-31','error');return;}
+  var rem={id:'r'+Date.now(),name:name,amount:amt,dueDay:day,active:true};
+  u.reminders=[rem].concat(u.reminders||[]);
+  saveState();
+  showToast('Reminder added!');
+  toggleAddReminder();
+  renderReminders();
+  renderHome();
+}
 function nth(d){var s=['th','st','nd','rd'],v=d%100;return s[(v-20)%10]||s[v]||s[0];}
 function renderReminders(){
   var u=state.user;if(!u)return;
@@ -660,7 +674,8 @@ function renderReminders(){
     shown++;
     html+='<div class="card" style="margin-top:0;opacity:'+(r.active?1:0.6)+'"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><div><div style="font-size:14px;font-weight:800;color:#1A237E">'+r.name+'</div><div style="font-size:11px;color:#90A4AE">Every '+r.dueDay+nth(r.dueDay)+'</div><div style="font-size:11px;font-weight:700;color:#90A4AE">Due '+dueDateStr(r.dueDay)+'</div></div><div style="font-size:15px;font-weight:900;color:#D32F2F">-'+fmt(r.amount)+'</div></div><div style="display:flex;gap:7px"><button onclick="markPaid(\''+r.id+'\')" style="flex:1;background:#E8F5E9;border:1px solid #A5D6A7;border-radius:9px;padding:7px;color:#2E7D32;font-size:12px;font-weight:800;cursor:pointer">Mark Paid</button><button onclick="toggleReminder(\''+r.id+'\')" style="background:#E3F2FD;border:1px solid #BBDEFB;border-radius:9px;padding:7px 11px;color:#1565C0;font-size:11px;font-weight:700;cursor:pointer">'+(r.active?'Pause':'Resume')+'</button><button onclick="deleteReminder(\''+r.id+'\')" style="background:#FFEBEE;border:1px solid #FFCDD2;border-radius:9px;padding:7px 11px;color:#D32F2F;font-size:11px;font-weight:700;cursor:pointer">X</button></div></div>';
   });
-  if(shown===0&&due.length===0)html+='<div class="empty"><div class="ico">✅</div><div class="etitle">All paid this month!</div><div class="esub">Reminders will reappear next month</div></div>';
+  if(reminders.length>0&&shown===0&&due.length===0)html+='<div class="empty"><div class="ico">✅</div><div class="etitle">All paid this month!</div><div class="esub">Reminders will reappear next month</div></div>';
+  else if(reminders.length===0)html+=''; // already handled above
   document.getElementById('remindersList').innerHTML=html;
 }
 function markPaid(rid){var u=state.user;if(!u)return;var r=(u.reminders||[]).find(function(x){return x.id===rid});if(!r)return;var today=new Date(),ym=today.getFullYear()+'-'+(today.getMonth()+1<10?'0':'')+(today.getMonth()+1);if(!u.reminderPayments)u.reminderPayments={};u.reminderPayments[rid+'-'+ym]=true;saveState();showToast(r.name+' paid');renderHome();renderReminders();renderEmi();}
@@ -690,7 +705,17 @@ function saveName(){var n=document.getElementById('settingName').value.trim();if
 function addSubCat(){var n=document.getElementById('newSubCatName').value.trim();if(!n){showToast('Enter name','error');return;}var cats=state.subCategories[settingCat]||[];var wo=cats.filter(function(c){return c!=='Other';});state.subCategories[settingCat]=wo.concat([n,'Other']);saveState();showToast('Added!');document.getElementById('newSubCatName').value='';renderSubCatList();}
 function removeSubCat(cat,name){state.subCategories[cat]=(state.subCategories[cat]||[]).filter(function(c){return c!==name;});saveState();showToast('Removed');renderSubCatList();}
 function renderSubCatList(){document.getElementById('subCatList').innerHTML=MAIN_CATS.map(function(cat){return '<div class="card"><div class="card-title">'+cat+'</div><div class="chips">'+(state.subCategories[cat]||[]).map(function(s){return '<div style="display:flex;align-items:center;gap:4px;background:'+(s==='Other'?'#E3F2FD':'#BBDEFB')+';border-radius:100px;padding:5px 12px;border:1px solid #BBDEFB"><span style="font-size:12px;font-weight:700;color:#1565C0">'+s+'</span>'+(s!=='Other'?'<button onclick="removeSubCat(\''+cat+'\',\''+s+'\')" style="background:none;border:none;color:#D32F2F;font-size:15px;cursor:pointer;padding:0 0 0 3px;line-height:1">x</button>':'')+'</div>';}).join('')+'</div></div>';}).join('');}
-function getPendingEmiLiability(){var u=state.user;if(!u)return 0;var today=new Date(),ym=today.getFullYear()+'-'+(today.getMonth()+1<10?'0':'')+(today.getMonth()+1);var total=0;(u.reminders||[]).forEach(function(r){if(!r.active)return;if(!(u.reminderPayments||{})[r.id+'-'+ym])total+=r.amount;});return total;}
+function getPendingEmiLiability(){
+  var u=state.user;if(!u)return 0;
+  var today=new Date(),ym=today.getFullYear()+'-'+(today.getMonth()+1<10?'0':'')+(today.getMonth()+1);
+  var total=0;
+  (u.reminders||[]).forEach(function(r){
+    if(!r.active)return;
+    if((u.reminderPayments||{})[r.id+'-'+ym])return; // already paid
+    total+=r.amount;
+  });
+  return total;
+}
 function toggleAddEmi(){var f=document.getElementById('addEmiForm');var showing=f.style.display!=='none';f.style.display=showing?'none':'block';if(!showing){document.getElementById('emiName').value='';document.getElementById('emiAmount').value='';document.getElementById('emiDueDay').value='';}}
 function saveEmi(){var u=state.user;if(!u)return;var name=document.getElementById('emiName').value.trim();var amt=parseFloat(document.getElementById('emiAmount').value);var day=parseInt(document.getElementById('emiDueDay').value);if(!name||!amt||!day){showToast('Fill all fields','error');return;}var today=new Date();var startYM=today.getFullYear()+'-'+(today.getMonth()+1<10?'0':'')+(today.getMonth()+1);if(!u.emis)u.emis=[];if(!u.emiPayments)u.emiPayments={};u.emis.unshift({id:'e'+Date.now(),name:name,amount:amt,dueDay:day,active:true,startYM:startYM});if(!u.reminders)u.reminders=[];u.reminders.unshift({id:'r'+Date.now(),name:name,amount:amt,dueDay:day,accountId:'',active:true});saveState();showToast('EMI added!');toggleAddEmi();renderEmi();renderHome();}
 function renderEmiCard(e,ym,u){
